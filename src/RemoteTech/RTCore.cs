@@ -16,6 +16,9 @@ namespace RemoteTech
         public NetworkManager Network { get; protected set; }
         public NetworkRenderer Renderer { get; protected set; }
 
+        /// Addons
+        public AddOns.ControlLockAddon ctrlLockAddon { get; protected set; }
+
         public event Action OnFrameUpdate = delegate { };
         public event Action OnPhysicsUpdate = delegate { };
         public event Action OnGuiUpdate = delegate { };
@@ -33,6 +36,8 @@ namespace RemoteTech
             }
 
             Instance = this;
+
+            ctrlLockAddon = new AddOns.ControlLockAddon();
 
             Satellites = new SatelliteManager();
             Antennas = new AntennaManager();
@@ -101,7 +106,7 @@ namespace RemoteTech
 
         public void OnDestroy()
         {
-            if (FocusOverlay != null) FocusOverlay.Dispose();
+            if (FocusOverlay != null) FocusOverlay.Dispose(); 
             if (FilterOverlay != null) FilterOverlay.Dispose();
             if (FilterOverlay != null) FilterOverlay.Dispose();
             if (Renderer != null) Renderer.Detach();

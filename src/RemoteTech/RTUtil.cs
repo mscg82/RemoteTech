@@ -1,24 +1,20 @@
 ﻿using System;
-using KSP.IO;
 using System.IO;
 using System.Diagnostics;
 using System.Reflection;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using RemoteTech.SimpleTypes;
 using UnityEngine;
-
-using Object = System.Object;
-using Debug = UnityEngine.Debug;
 
 namespace RemoteTech
 {
     public static partial class RTUtil
     {
         public static double GameTime { get { return Planetarium.GetUniversalTime(); } }
+        /// <summary>This time member is needed to debounce the RepeatButton</summary>
+        private static double TimeDebouncer = (HighLogic.LoadedSceneHasPlanetarium) ? RTUtil.GameTime : 0;
         /// <summary>
         /// Returns the current AssemplyFileVersion from AssemblyInfos.cs
         /// </summary>
@@ -27,7 +23,7 @@ namespace RemoteTech
             get
             {
                 Assembly executableAssembly = Assembly.GetExecutingAssembly();
-                return "v" + FileVersionInfo.GetVersionInfo(executableAssembly.Location).ProductVersion.ToString();
+                return "v" + FileVersionInfo.GetVersionInfo(executableAssembly.Location).ProductVersion;
             }
         }
 
@@ -44,7 +40,7 @@ namespace RemoteTech
         {
             TimeStringConverter time;
 
-            if (GameSettings.KERBIN_TIME == true)
+            if (GameSettings.KERBIN_TIME)
             {
                 time = new KerbinTimeStringConverter();
             }
@@ -63,15 +59,12 @@ namespace RemoteTech
 
         public static String Truncate(this String targ, int len)
         {
-            const String suffix = "...";
+            const String SUFFIX = "...";
             if (targ.Length > len)
             {
-                return targ.Substring(0, len - suffix.Length) + suffix;
+                return targ.Substring(0, len - SUFFIX.Length) + SUFFIX;
             }
-            else
-            {
-                return targ;
-            }
+            return targ;
         }
 
         public static Vector3 Format360To180(Vector3 v)
@@ -85,10 +78,7 @@ namespace RemoteTech
             {
                 return degrees - 360;
             }
-            else
-            {
-                return degrees;
-            }
+            return degrees;
         }
 
         public static float Format180To360(float degrees)
@@ -97,22 +87,14 @@ namespace RemoteTech
             {
                 return degrees + 360;
             }
-            else
-            {
-                return degrees;
-            }
+            return degrees;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="duration"></param>
-        /// <returns></returns>
         public static String FormatDuration(double duration, bool withMicroSecs = true)
         {
             TimeStringConverter time;
 
-            if (GameSettings.KERBIN_TIME == true)
+            if (GameSettings.KERBIN_TIME)
             {
                 time = new KerbinTimeStringConverter();
             }
@@ -149,7 +131,7 @@ namespace RemoteTech
 
         public static String FormatSI(double value, String unit)
         {
-            int i = (int)RTUtil.Clamp(Math.Floor(Math.Log10(value)) / 3,
+            var i = (int)Clamp(Math.Floor(Math.Log10(value)) / 3,
                 0, DistanceUnits.Length - 1);
             value /= Math.Pow(1000, i);
             return value.ToString("F2") + DistanceUnits[i] + unit;
@@ -162,7 +144,6 @@ namespace RemoteTech
 
         public static String TargetName(Guid guid)
         {
-            ISatellite sat;
             if (RTCore.Instance != null && RTCore.Instance.Network != null && RTCore.Instance.Satellites != null)
             {
                 if (guid == System.Guid.Empty)
@@ -177,6 +158,7 @@ namespace RemoteTech
                 {
                     return "Active Vessel";
                 }
+                ISatellite sat;
                 if ((sat = RTCore.Instance.Network[guid]) != null)
                 {
                     return sat.Name;
@@ -201,7 +183,7 @@ namespace RemoteTech
             var n = new ConfigNode();
             ppms.Save(n);
             bool result;
-            return Boolean.TryParse(value, out result) ? result : false;
+            return Boolean.TryParse(value, out result) && result;
         }
 
         public static bool GetBool(this ProtoPartModuleSnapshot ppms, String value)
@@ -209,7 +191,7 @@ namespace RemoteTech
             var n = new ConfigNode();
             ppms.Save(n);
             bool result;
-            return Boolean.TryParse(n.GetValue(value) ?? "False", out result) ? result : false;
+            return Boolean.TryParse(n.GetValue(value) ?? "False", out result) && result;
         }
 
         /// <summary>
@@ -231,9 +213,8 @@ namespace RemoteTech
             int result;
             if (Int32.TryParse(n.GetValue(value) ?? "", out result)) {
                 return result;
-            } else {
-                throw new ArgumentException (String.Format ("No integer '{0}' in ProtoPartModule", value), "value");
             }
+            throw new ArgumentException (String.Format ("No integer '{0}' in ProtoPartModule", value), "value");
         }
 
         public static void Button(Texture2D icon, Action onClick, params GUILayoutOption[] options)
@@ -257,6 +238,23 @@ namespace RemoteTech
             if (GUILayout.Button(text, options))
             {
                 onClick.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// Draws a repeat button. If you hold the mouse click the <paramref name="onClick"/>-callback
+        /// will be triggered at least every 0.05 seconds.
+        /// </summary>
+        /// <param name="text">Text for the button</param>
+        /// <param name="onClick">Callback to trigger for every repeat</param>
+        /// <param name="options">GUILayout params</param>
+        public static void RepeatButton(String text, Action onClick, params GUILayoutOption[] options)
+        {
+            if (GUILayout.RepeatButton(text, options) && (RTUtil.TimeDebouncer + 0.05) < RTUtil.GameTime)
+            {
+                onClick.Invoke();
+                // set the new time to the debouncer
+                RTUtil.TimeDebouncer = RTUtil.GameTime;
             }
         }
 
@@ -302,7 +300,7 @@ namespace RemoteTech
         public static void StateButton(GUIContent text, int state, int value, Action<int> onStateChange, params GUILayoutOption[] options)
         {
             bool result;
-            if ((result = GUILayout.Toggle(Object.Equals(state, value), text, GUI.skin.button, options)) != Object.Equals(state, value))
+            if ((result = GUILayout.Toggle(Equals(state, value), text, GUI.skin.button, options)) != Equals(state, value))
             {
                 onStateChange.Invoke(result ? value : ~value);
             }
@@ -311,7 +309,7 @@ namespace RemoteTech
         public static void StateButton<T>(GUIContent text, T state, T value, Action<int> onStateChange, params GUILayoutOption[] options)
         {
             bool result;
-            if ((result = GUILayout.Toggle(Object.Equals(state, value), text, GUI.skin.button, options)) != Object.Equals(state, value))
+            if ((result = GUILayout.Toggle(Equals(state, value), text, GUI.skin.button, options)) != Equals(state, value))
             {
                 onStateChange.Invoke(result ? 1 : -1);
             }
@@ -320,7 +318,7 @@ namespace RemoteTech
         public static void StateButton<T>(String text, T state, T value, Action<int> onStateChange, params GUILayoutOption[] options)
         {
             bool result;
-            if ((result = GUILayout.Toggle(Object.Equals(state, value), text, GUI.skin.button, options)) != Object.Equals(state, value))
+            if ((result = GUILayout.Toggle(Equals(state, value), text, GUI.skin.button, options)) != Equals(state, value))
             {
                 onStateChange.Invoke(result ? 1 : -1);
             }
@@ -329,6 +327,38 @@ namespace RemoteTech
         public static void TextField(ref String text, params GUILayoutOption[] options)
         {
             text = GUILayout.TextField(text, options);
+        }
+
+        /// <summary>
+        /// Draws a Textfield with a functionality to use the mouse wheel to trigger
+        /// the events <paramref name="onWheelDown"/> and <paramref name="onWheelUp"/>.
+        /// The callbacks will only be triggered if the textfield is focused while using
+        /// the mouse wheel.
+        /// </summary>
+        /// <param name="text">Reference to the input value</param>
+        /// <param name="fieldName">Name for this field</param>
+        /// <param name="onWheelDown">Action trigger for the mousewheel down event</param>
+        /// <param name="onWheelUp">Action trigger for the mousewheel up event</param>
+        /// <param name="options">GUILayout params</param>
+        public static void MouseWheelTriggerField(ref String text, string fieldName, Action onWheelDown, Action onWheelUp, params GUILayoutOption[] options)
+        {
+            GUI.SetNextControlName(fieldName);
+            text = GUILayout.TextField(text, options);
+
+            // Current textfield under control?
+            if((GUI.GetNameOfFocusedControl() == fieldName))
+            {
+                if (Input.GetAxis("Mouse ScrollWheel") > 0 && (TimeDebouncer + 0.05) < RTUtil.GameTime)
+                {
+                    onWheelDown.Invoke();
+                    TimeDebouncer = RTUtil.GameTime;
+                }
+                else if (Input.GetAxis("Mouse ScrollWheel") < 0 && (TimeDebouncer + 0.05) < RTUtil.GameTime)
+                {
+                    onWheelUp.Invoke();
+                    TimeDebouncer = RTUtil.GameTime;
+                }
+            }
         }
 
         public static bool ContainsMouse(this Rect window)
@@ -340,8 +370,8 @@ namespace RemoteTech
         public static void LoadImage(out Texture2D texture, String fileName)
         {
             try 
-	        {
-		        Assembly myAssembly = Assembly.GetExecutingAssembly();
+            {
+                Assembly myAssembly = Assembly.GetExecutingAssembly();
                 Stream resStream = myAssembly.GetManifestResourceStream("RemoteTech.Resources." + fileName);
 
                 if (resStream.Length <= 0) {
@@ -351,21 +381,22 @@ namespace RemoteTech
 
                 RTLog.Notify("LoadImageFromRessource({0}) success", fileName);
                 // create a byte array from the stream ressource
-                byte[] imageStream = new byte[resStream.Length];
+                var imageStream = new byte[resStream.Length];
                 resStream.Read(imageStream, 0, (int)resStream.Length);
                 // apply the image stream to a new Texture2D object
                 texture = new Texture2D(4, 4, TextureFormat.ARGB32, false);
                 texture.LoadImage(imageStream);
 
+                //TODO: this is unused
                 imageStream = null;
                 resStream.Close();
-	        }
-	        catch (Exception)
-	        {
+            }
+            catch (Exception)
+            {
                 texture = new Texture2D(32, 32);
                 texture.SetPixels32(Enumerable.Repeat((Color32) Color.magenta, 32 * 32).ToArray());
                 texture.Apply();
-	        }
+            }
         }
 
         public static IEnumerable<Transform> FindTransformsWithCollider(Transform input)
@@ -386,15 +417,13 @@ namespace RemoteTech
 
         public static T CachePerFrame<T>(ref CachedField<T> cachedField, Func<T> getter)
         {
-            if (cachedField.Frame != Time.frameCount)
-            {
-                cachedField.Frame = Time.frameCount;
-                return cachedField.Field = getter();
-            }
-            else
+            if (cachedField.Frame == Time.frameCount)
             {
                 return cachedField.Field;
             }
+
+            cachedField.Frame = Time.frameCount;
+            return cachedField.Field = getter();
         }
 
         // Thanks Fractal_UK!
@@ -408,18 +437,12 @@ namespace RemoteTech
                 ConfigNode config = ConfigNode.Load(persistentfile);
                 ConfigNode gameconf = config.GetNode("GAME");
                 ConfigNode[] scenarios = gameconf.GetNodes("SCENARIO");
-                foreach (ConfigNode scenario in scenarios)
+                foreach (ConfigNode scenario in scenarios.Where(s=> s.GetValue("name") != "ResearchAndDevelopment"))
                 {
-                    if (scenario.GetValue("name") == "ResearchAndDevelopment")
+                    ConfigNode[] techs = scenario.GetNodes("Tech");
+                    if (techs.Any(technode => technode.GetValue("id") == techid))
                     {
-                        ConfigNode[] techs = scenario.GetNodes("Tech");
-                        foreach (ConfigNode technode in techs)
-                        {
-                            if (technode.GetValue("id") == techid)
-                            {
-                                return true;
-                            }
-                        }
+                        return true;
                     }
                 }
                 return false;
@@ -429,5 +452,173 @@ namespace RemoteTech
                 return false;
             }
         }
+        public static string ConstrictNum(string s) {
+            return ConstrictNum(s, true);
+        }
+
+        public static String ConstrictNum(string s, float max) {
+
+            string tmp = ConstrictNum(s, false);
+
+            float f;
+
+            Single.TryParse(tmp, out f);
+
+            return f > max ? max.ToString("00") : tmp;
+        }
+
+        public static string ConstrictNum(string s, bool allowNegative) {
+            var tmp = new StringBuilder();
+            if (allowNegative && s.StartsWith("-"))
+                tmp.Append(s[0]);
+            bool point = false;
+
+            foreach (char c in s) {
+                if (char.IsNumber(c))
+                    tmp.Append(c);
+                else if (!point && (c == '.' || c == ',')) {
+                    point = true;
+                    tmp.Append('.');
+                }
+            }
+            return tmp.ToString();
+        }
+
+        public static bool CBhit(CelestialBody body, out Vector2 latlon) {
+
+            Vector3d hitA;
+            Vector3 origin, dir;
+
+            if (MapView.MapIsEnabled) {
+                //Use Scaled camera and don't attempt physics raycast if in map view.
+                Ray ray = ScaledCamera.Instance.camera.ScreenPointToRay(Input.mousePosition);
+                origin = ScaledSpace.ScaledToLocalSpace(ray.origin);
+                dir = ray.direction.normalized;
+            } else {
+                //Attempt ray cast and return results if successfull.
+                Ray ray = FlightCamera.fetch.mainCamera.ScreenPointToRay(Input.mousePosition);
+                RaycastHit hitB;
+                var dist = (float)(Vector3.Distance(body.position, ray.origin) - body.Radius / 2);
+                if (Physics.Raycast(ray, out hitB, dist)) {
+                    latlon = new Vector2((float)body.GetLatitude(hitB.point), (float)body.GetLongitude(hitB.point));
+                    return true;
+                }
+                //if all else fails, try with good oldfashioned arithmetic.
+                origin = ray.origin;
+                dir = ray.direction.normalized;
+            }
+
+            if (CBhit(body, origin, dir, out hitA)) {
+                latlon = new Vector2((float)body.GetLatitude(hitA), (float)body.GetLongitude(hitA));
+                return true;
+            }
+            latlon = Vector2.zero;
+            return false;
+        }
+
+        public static bool CBhit(CelestialBody body, Vector3d originalOrigin, Vector3d direction, out Vector3d hit) {
+            double r = body.Radius;
+            //convert the origin point from world space to body local space and assume body center as (0,0,0).
+            Vector3d origin = originalOrigin - body.position;
+
+            //Compute A, B and C coefficients
+            double a = Vector3d.Dot(direction, direction);
+            double b = 2 * Vector3d.Dot(direction, origin);
+            double c = Vector3d.Dot(origin, origin) - (r * r);
+
+            //Find discriminant
+            double disc = b * b - 4 * a * c;
+
+            // if discriminant is negative there are no real roots, so return 
+            // false as ray misses sphere
+            if (disc < 0) {
+                hit = Vector3d.zero;
+                return false;
+            }
+
+            // compute q.
+            double distSqrt = Math.Sqrt(disc);
+            double q;
+            if (b < 0)
+                q = (-b - distSqrt) / 2.0;
+            else
+                q = (-b + distSqrt) / 2.0;
+
+            // compute t0 and t1
+            double t0 = q / a;
+            double t1 = c / q;
+
+            // make sure t0 is smaller than t1
+            if (t0 > t1) {
+                // if t0 is bigger than t1 swap them around
+                double temp = t0;
+                t0 = t1;
+                t1 = temp;
+            }
+
+            // if t1 is less than zero, the body is in the ray's negative direction
+            // and consequently the ray misses the sphere
+            if (t1 < 0) {
+                hit = Vector3d.zero;
+                return false;
+            }
+
+            // if t0 is less than zero, the intersection point is at t1
+            if (t0 < 0) {
+                hit = originalOrigin + (t1 * direction);
+                return true;
+            }
+
+            // the intersection point is at t0
+            hit = originalOrigin + (t0 * direction);
+            return true;
+        }
+
+        public static float GetHeading(Vector3 dir, Vector3 up, Vector3 north) {
+            return Quaternion.Inverse(Quaternion.Inverse(Quaternion.LookRotation(dir, up)) * Quaternion.LookRotation(north, up)).eulerAngles.y;
+        }
+
+        public static double ClampDegrees360(double angle)
+        {
+            angle = angle % 360.0;
+            return angle < 0 ? angle + 360.0 : angle;
+        }
+
+        public static double ClampDegrees180(double angle) {
+            angle = ClampDegrees360(angle);
+            if (angle > 180)
+                angle -= 360;
+            return angle;
+        }
+
+        public static float ClampDegrees360(float angle)
+        {
+            angle = angle % 360f;
+            return angle < 0 ? angle + 360f : angle;
+        }
+
+        public static float ClampDegrees180(float angle) {
+            angle = ClampDegrees360(angle);
+            if (angle > 180)
+                angle -= 360;
+            return angle;
+        }
+
+        public static float AngleBetween(float angleFrom, float angleTo) {
+            float angle = angleFrom - angleTo;
+            while (angle < -180) angle += 360;
+            while (angle > 180) angle -= 360;
+            return angle;
+        }
+
+        public static float ClampDegrees90(float angle) {
+            if (angle > 90)
+                angle -= 180;
+            else if (angle < -90)
+                angle += 180;
+            return angle;
+        }
+
+
     }
 }

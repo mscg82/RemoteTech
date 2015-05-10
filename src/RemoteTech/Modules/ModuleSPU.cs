@@ -57,7 +57,8 @@ namespace RemoteTech.Modules
         /// Contains the names of any events that should always be run, 
         /// regardless of connection status or signal delay
         /// </summary>
-        private static readonly HashSet<String> eventWhiteList = new HashSet<String>() {
+        private static readonly HashSet<String> eventWhiteList = new HashSet<String>
+        {
             "RenameVessel", "RenameAsteroidEvent"
         };
 
@@ -77,6 +78,7 @@ namespace RemoteTech.Modules
             {
                 GameEvents.onVesselWasModified.Add(OnVesselModified);
                 GameEvents.onPartUndock.Add(OnPartUndock);
+                GameEvents.onPartActionUICreate.Add(onPartActionUICreate);
                 mRegisteredId = vessel.id; 
                 RTCore.Instance.Satellites.Register(vessel, this);
                 if (FlightComputer == null)
@@ -85,11 +87,17 @@ namespace RemoteTech.Modules
             Fields["GUI_Status"].guiActive = ShowGUI_Status;
         }
 
+        public void onPartActionUICreate(Part p)
+        {
+            HookPartMenus();
+        }
+
         public void OnDestroy()
         {
             RTLog.Notify("ModuleSPU: OnDestroy");
             GameEvents.onVesselWasModified.Remove(OnVesselModified);
             GameEvents.onPartUndock.Remove(OnPartUndock);
+            GameEvents.onPartActionUICreate.Remove(onPartActionUICreate);
             if (RTCore.Instance != null)
             {
                 RTCore.Instance.Satellites.Unregister(mRegisteredId, this);
@@ -126,7 +134,7 @@ namespace RemoteTech.Modules
         public void FixedUpdate()
         {
             if (FlightComputer != null) FlightComputer.OnFixedUpdate();
-            HookPartMenus();
+            
             switch (UpdateControlState())
             {
                 case State.Operational:
@@ -156,7 +164,7 @@ namespace RemoteTech.Modules
 
         public void HookPartMenus()
         {
-            UIPartActionMenuPatcher.Wrap(vessel, (e, ignore_delay) =>
+            UIPartActionMenuPatcher.Wrap(vessel, (e, ignoreDelay) =>
             {
                 var v = FlightGlobals.ActiveVessel;
                 if (v == null || v.isEVA || RTCore.Instance == null)
@@ -176,7 +184,7 @@ namespace RemoteTech.Modules
                 }
                 else if (vs.FlightComputer != null && vs.FlightComputer.InputAllowed)
                 {
-                    if (ignore_delay)
+                    if (ignoreDelay)
                     {
                         e.Invoke();
                     }
@@ -218,7 +226,7 @@ namespace RemoteTech.Modules
                 }
 
             }
-            catch (Exception e) { print(e); };
+            catch (Exception e) { print(e); }
         }
         public override void OnLoad(ConfigNode node)
         {
