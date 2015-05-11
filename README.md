@@ -3,12 +3,11 @@ RemoteTech XF
 
 RemoteTech XF is a variant of RemoteTech, made either for people that want a slightly more forgiving experience or for those that want to drop RemoteTech into an existing game and be able to use their existing satellites/probes.
 
-It makes one minor change that has major implications - **you can control antennas on probes without a connection. The rest of the probe (and the rest of RemoteTech) remains the same!**
+It makes one minor change that has major implications: antennas are always controllable by the player, even without a connection to Mission Control. This allows the player to simulate what real-life probes do when something unexpected happens: they try to re-establish a connection with home! It's handy for...
 
-* Are you tried of losing your probe because you forgot to activate your main antenna before you drop the stage that had your launch antenna? Do you think that's dumb, because NASA doesn't have that problem? With XF, you can fix that in-flight!
-
-* Have you been frustrated by pressing the wrong button and losing your probe forever because you mis-pointed your antenna? With XF, that won't happen.
-* Do you want to install RemoteTech on an existing game, but want to be able to use your existing probes? With XF, you can!
+* Retracting antennas during aerobraking and extending them when you're done!
+* Recovering from mistakes (whoops, ComSat1 just blew up!).
+* Adding RemoteTech to an existing game (since when you load them up for the first time, all the probes have their antennas turned off).
 
 
 Besides making it more forgiving, activating and pointing antennas without a connection is also (arguably) more realistic. In real life, probes have low-gain omni-directional antennas that allow space agencies to easily send simple commands across the solar system (like, "point your main dish over here") and probes generally have the intelligence to attempt to re-establish connection if they lose it. In some ways, standard RemoteTech is less forgiving of simple mistakes than real life interplanetary networks! That was my reason for creating XF.
