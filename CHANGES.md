@@ -1,3 +1,38 @@
+Version 1.6.9
+========================================
+Released November 10, 2015
+
+General
+--------------------
+- KSP 1.0.5 update
+- Small kOS update for invoking events
+
+
+Version 1.6.8
+========================================
+Released September 12, 2015
+
+General
+--------------------
+- Added a new value to RTSettings to keep the throttle on connection loose (ThrottleZeroOnNoConnection=True or False)
+- Clean up vessel target handling (thx to geoffromer)
+- Added Asteroid Day antennas (thx to phroggster)
+- Added NovaPunch antennas (thx to blnk2007)
+
+
+Version 1.6.7
+========================================
+Released June 25, 2015
+
+Bug fixes
+--------------------
+- Fixed a problem for transmitting science data in combination with ScienceAlert
+
+General
+--------------------
+- KSP 1.0.4 update
+
+
 Version 1.6.6
 ========================================
 Released June 21, 2015
